@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Memory Management Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+  <header class="header">
+    <div class="brand">
+      <div class="logo-mark">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect x="2" y="2" width="24" height="24" rx="3" stroke="var(--green)" stroke-width="1.5"/>
+          <rect x="6"  y="6"  width="6" height="6" rx="1" fill="var(--green)" opacity=".9"/>
+          <rect x="16" y="6"  width="6" height="6" rx="1" fill="var(--green)" opacity=".5"/>
+          <rect x="6"  y="16" width="6" height="6" rx="1" fill="var(--green)" opacity=".5"/>
+          <rect x="16" y="16" width="6" height="6" rx="1" fill="var(--green)" opacity=".2"/>
+          <line x1="13" y1="6" x2="13" y2="22" stroke="var(--green)" stroke-width="1" opacity=".3"/>
+          <line x1="6" y1="13" x2="22" y2="13" stroke="var(--green)" stroke-width="1" opacity=".3"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Memory Manager</h1>
+        <p>RAM Allocation &amp; Page Replacement Simulator</p>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill" id="ramUsedPill"><span class="pill-val" id="hdrUsed">0</span><span class="pill-lbl">KB USED</span></div>
+      <div class="stat-pill accent"><span class="pill-val" id="hdrFree">1024</span><span class="pill-lbl">KB FREE</span></div>
+      <button class="firebase-save-btn" id="firebaseSaveBtn" onclick="saveSimulationToFirebase()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Save to Firebase
+    </button> 
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════ TAB BAR ═══════════════════════════ -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('alloc')" id="tab-alloc">
+      <svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="5" height="5" rx="1" fill="currentColor" opacity=".8"/><rect x="8" y="1" width="5" height="5" rx="1" fill="currentColor" opacity=".4"/><rect x="1" y="8" width="5" height="5" rx="1" fill="currentColor" opacity=".4"/><rect x="8" y="8" width="5" height="5" rx="1" fill="currentColor" opacity=".2"/></svg>
+      Allocation Strategies
+    </button>
+    <button class="tab" onclick="switchTab('page')" id="tab-page">
+      <svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="5" y1="3" x2="5" y2="12" stroke="currentColor" stroke-width="1.2" opacity=".5"/><line x1="9" y1="3" x2="9" y2="12" stroke="currentColor" stroke-width="1.2" opacity=".5"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.2" opacity=".5"/></svg>
+      Page Replacement
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════ ALLOCATION TAB ═══════════════════════════ -->
+  <div id="pane-alloc" class="tab-pane active">
+
+    <!-- Algorithm strip -->
+    <div class="algo-strip" id="algoStrip"></div>
+
+    <div class="main">
+
+      <!-- ── LEFT COLUMN ── -->
+      <div class="left-col">
+
+        <!-- Algorithm info -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Algorithm</span>
+            <span class="card-badge" id="algoLabel">First Fit</span>
+          </div>
+          <div class="card-body">
+            <div class="explain" id="explainBox"></div>
+          </div>
+        </div>
+
+        <!-- Memory Config -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Memory Blocks</span>
+            <button class="btn-icon" onclick="addBlock()" title="Add block">
+              <svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="field-hint">Define free RAM partitions (KB)</div>
+            <table class="data-tbl" id="blocksTable">
+              <thead><tr><th>Block</th><th>Size (KB)</th><th></th></tr></thead>
+              <tbody id="blocksBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Process Requests -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Process Requests</span>
+            <button class="btn-icon" onclick="addProcess()" title="Add process">
+              <svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="field-hint">Processes requesting memory allocation</div>
+            <table class="data-tbl" id="procsTable">
+              <thead><tr><th>PID</th><th>Size (KB)</th><th></th></tr></thead>
+              <tbody id="procsBody"></tbody>
+            </table>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="resetAlloc()">↺ Reset</button>
+              <button class="btn btn-primary" onclick="runAlloc()">
+                <svg width="10" height="10" viewBox="0 0 10 10"><polygon points="1,0 10,5 1,10" fill="currentColor"/></svg>
+                Allocate
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /left -->
+
+      <!-- ── RIGHT COLUMN ── -->
+      <div id="allocResult">
+        <div class="card">
+          <div class="card-body">
+            <div class="empty-state">
+              <div class="empty-icon">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <rect x="4" y="4" width="32" height="32" rx="4" stroke="var(--green)" stroke-width="1.5" opacity=".3"/>
+                  <rect x="10" y="10" width="8" height="8" rx="1.5" fill="var(--green)" opacity=".2"/>
+                  <rect x="22" y="10" width="8" height="8" rx="1.5" fill="var(--green)" opacity=".1"/>
+                  <rect x="10" y="22" width="8" height="8" rx="1.5" fill="var(--green)" opacity=".1"/>
+                  <rect x="22" y="22" width="8" height="8" rx="1.5" fill="var(--green)" opacity=".05"/>
+                </svg>
+              </div>
+              <h3>No Allocation Run</h3>
+              <p>Configure memory blocks and processes,<br>then click Allocate to see results.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /pane-alloc -->
+
+  <!-- ═══════════════════════════ PAGE REPLACEMENT TAB ═══════════════════════════ -->
+  <div id="pane-page" class="tab-pane">
+
+    <!-- Algorithm strip for page replacement -->
+    <div class="algo-strip" id="pageAlgoStrip"></div>
+
+    <div class="main">
+
+      <!-- ── LEFT COLUMN ── -->
+      <div class="left-col">
+
+        <!-- Algorithm info -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Algorithm</span>
+            <span class="card-badge" id="pageAlgoLabel">FIFO</span>
+          </div>
+          <div class="card-body">
+            <div class="explain" id="pageExplainBox"></div>
+          </div>
+        </div>
+
+        <!-- Page Config -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Configuration</span>
+          </div>
+          <div class="card-body">
+            <div class="config-grid">
+              <div class="config-field">
+                <label>Frames (Physical Memory)</label>
+                <input class="mono-inp" type="number" id="frameCount" min="1" max="10" value="3">
+              </div>
+              <div class="config-field">
+                <label>Reference String</label>
+                <input class="mono-inp wide" type="text" id="refString" value="7 0 1 2 0 3 0 4 2 3 0 3 2" placeholder="e.g. 7 0 1 2 0 3">
+                <div class="field-hint">Space-separated page numbers</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="loadPreset()">⟳ Preset</button>
+              <button class="btn btn-primary" onclick="runPageReplacement()">
+                <svg width="10" height="10" viewBox="0 0 10 10"><polygon points="1,0 10,5 1,10" fill="currentColor"/></svg>
+                Simulate
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /left -->
+
+      <!-- ── RIGHT COLUMN ── -->
+      <div id="pageResult">
+        <div class="card">
+          <div class="card-body">
+            <div class="empty-state">
+              <div class="empty-icon">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <rect x="4" y="8" width="32" height="24" rx="3" stroke="var(--green)" stroke-width="1.5" opacity=".3"/>
+                  <line x1="14" y1="8" x2="14" y2="32" stroke="var(--green)" stroke-width="1" opacity=".3"/>
+                  <line x1="26" y1="8" x2="26" y2="32" stroke="var(--green)" stroke-width="1" opacity=".3"/>
+                  <line x1="4" y1="18" x2="36" y2="18" stroke="var(--green)" stroke-width="1" opacity=".3"/>
+                </svg>
+              </div>
+              <h3>No Simulation Run</h3>
+              <p>Set the frame count and reference string,<br>then click Simulate.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /pane-page -->
+
+</div><!-- /app -->
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+<script type="module" src="firebase.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
